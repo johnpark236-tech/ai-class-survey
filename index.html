@@ -124,7 +124,7 @@ body[data-font='xxlarge'] .add-ai-btn{min-height:54px}
     <div class="eyebrow">INSTRUCTOR</div>
     <h1 style="font-size:23px">강사 비밀번호</h1>
     <p class="desc">관리 화면을 보려면 비밀번호를 입력하세요.</p>
-    <input class="field" id="passwordInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="비밀번호 입력" />
+    <input class="field" id="passwordInput" type="password" inputmode="text" autocomplete="current-password" placeholder="비밀번호 입력" />
     <div class="nav"><button class="secondary" id="cancelLogin">취소</button><button class="primary" id="loginBtn">접속</button></div>
     <p class="note" id="loginMsg"></p>
   </div>
@@ -138,7 +138,7 @@ let adminRows=[];
 let adminPassword='';
 const STORAGE_KEY='aiClassSurvey.responses.v1';
 const FONT_KEY='aiClassSurvey.fontSize.v1';
-const ADMIN_HASH='03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // 기본 비밀번호 1234의 SHA-256
+const ADMIN_HASH='94a2118180637b8733ceca2c33f7ad4b1383c143d0c89eeddea2653b7526aa0e'; // 강사 비밀번호 #2040의 SHA-256
 const profileQuestion={id:'name',type:'text',required:true,title:'성함을 알려주세요.',desc:'설문 결과를 구분하기 위한 기본 정보입니다.',placeholder:'예: 김민수'};
 const questions=[
  {id:'digital',type:'single',required:true,title:'스마트폰이나 컴퓨터 사용은 어느 정도 편하신가요?',opts:['많이 어렵다','조금 어렵다','보통이다','익숙하다']},
@@ -154,6 +154,7 @@ const questions=[
 ];
 const steps=[profileQuestion,...questions];
 let step=-1, answers={customTools:[]};
+let isSubmitting=false;
 
 const $=s=>document.querySelector(s);
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
@@ -283,15 +284,26 @@ function classify(){
  return score>=8?'AI 활용형 🚀':score>=4?'AI 경험형 🌿':'AI 처음형 🌱';
 }
 async function submitSurvey(){
+ if(isSubmitting) return;
+ isSubmitting=true;
+ const submitBtn=$('#nextBtn');
+ if(submitBtn){
+   submitBtn.disabled=true;
+   submitBtn.textContent='업로드 중입니다…';
+   submitBtn.style.opacity='.65';
+   submitBtn.style.cursor='wait';
+ }
  const mergedTools=[...(answers.tools||[]),...(answers.customTools||[]).map(v=>'기타: '+v)];
  const rec={id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(36),createdAt:new Date().toISOString(),level:classify(),...answers,tools:mergedTools};
  delete rec.customTools;
- const all=getResponses(); all.push(rec); saveResponses(all);
+ const all=getResponses();
+ if(!all.some(x=>x.id===rec.id)){all.push(rec);saveResponses(all)}
  let centralSaved=false;
  if(API_URL){
    try{
      const serverRec={...rec,learn:Array.isArray(rec.learn)?rec.learn.join(' | '):rec.learn};
-     await apiCall('submit',{record:serverRec}); centralSaved=true;
+     const result=await apiCall('submit',{record:serverRec});
+     centralSaved=!!result.ok;
    }catch(e){console.error(e)}
  }
  $('#progressWrap').classList.add('hidden');
@@ -299,9 +311,9 @@ async function submitSurvey(){
  '<div class="center hero"><div class="big-emoji">🎉</div><h1>설문이 완료되었습니다.</h1>'+
  '<p class="desc">'+esc(answers.name)+' 님, 감사합니다.<br>답변을 바탕으로 수업 내용과 실습 난이도를 준비하겠습니다.</p>'+
  '<div class="result-card"><div class="eyebrow">추천 학습 시작점</div><b style="font-size:calc(22px * var(--font-scale))">'+classify()+'</b>'+
- '<div class="note">'+(centralSaved?'Google Sheet에 안전하게 접수되었습니다.':'현재 기기에 임시 저장되었습니다.')+'</div></div></div>'+
+ '<div class="note">'+(centralSaved?'Google Sheet에 안전하게 한 번만 접수되었습니다.':'현재 기기에 임시 저장되었습니다.')+'</div></div></div>'+
  '<div class="nav"><button class="primary" id="restartBtn">새 설문 시작</button></div>';
- $('#restartBtn').onclick=()=>{answers={customTools:[]};intro()};
+ $('#restartBtn').onclick=()=>{isSubmitting=false;answers={customTools:[]};intro()};
 }
 async function sha256(s){const b=new TextEncoder().encode(s);const h=await crypto.subtle.digest('SHA-256',b);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function openAdminLogin(){ $('#loginModal').classList.remove('hidden'); $('#passwordInput').value=''; $('#loginMsg').textContent=''; setTimeout(()=>$('#passwordInput').focus(),50)}
