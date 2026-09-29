@@ -73,8 +73,8 @@ function submit_(r) {
       Array.isArray(r.done) ? r.done.join(' | ') : (r.done || ''),
       r.retry || '',
       r.verify || '',
-      r.learn || '',
-      r.practice || '',
+      Array.isArray(r.learn) ? r.learn.join(' | ') : (r.learn || ''),
+      r.practice || '', // Q10 노트북 지참 여부
       r.expect || '',
       r.goal || ''
     ]);
