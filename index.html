@@ -61,6 +61,9 @@ body[data-font='xxlarge'] .hero-badge{border-radius:16px}
 body[data-font='xxlarge'] .admin-toolbar{flex-direction:column}
 body[data-font='xxlarge'] .mini{width:100%;min-height:52px}
 body[data-font='xxlarge'] .stats{grid-template-columns:1fr}
+.other-ai-box{margin-top:14px;padding:14px;border:1px dashed var(--line);border-radius:16px;background:#faf9f5}.other-ai-row{display:flex;gap:8px;align-items:stretch}.other-ai-row .field{min-width:0;flex:1}.add-ai-btn{border:1px solid var(--accent);background:var(--accent2);color:#3f5c48;border-radius:14px;padding:0 14px;font-weight:800;cursor:pointer;white-space:nowrap}.custom-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.custom-chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 10px;font-size:calc(13px * var(--font-scale));cursor:pointer}.limit-note{margin-top:10px;font-size:calc(12px * var(--font-scale));color:var(--muted)}
+body[data-font='xxlarge'] .other-ai-row{flex-direction:column}
+body[data-font='xxlarge'] .add-ai-btn{min-height:54px}
 </style>
 </head>
 <body>
@@ -98,7 +101,7 @@ body[data-font='xxlarge'] .stats{grid-template-columns:1fr}
       </div>
     </div>
     <h2>강사 관리 화면</h2>
-    <p class="desc" id="adminSourceDesc">Google Sheet에 저장된 설문 응답을 확인합니다.</p>
+    <p class="desc" id="adminSourceDesc">Google Sheet에 저장된 최신 10문항 설문 응답을 확인합니다.</p>
     <div class="stats">
       <div class="stat"><span>총 응답</span><b id="statTotal">0</b></div>
       <div class="stat"><span>오늘 응답</span><b id="statToday">0</b></div>
@@ -110,7 +113,7 @@ body[data-font='xxlarge'] .stats{grid-template-columns:1fr}
       <button class="mini" id="clearBtn">전체 삭제</button>
     </div>
     <div class="table-wrap"><table><thead><tr>
-      <th>접수일시</th><th>이름</th><th>AI 경험</th><th>사용 AI</th><th>활용 목적</th><th>직접 해본 것</th><th>수업 기대</th><th>한 줄 목표</th>
+      <th>접수일시</th><th>이름</th><th>AI 사용 빈도</th><th>사용 AI</th><th>활용 희망</th><th>직접 해본 활동</th><th>배우고 싶은 것</th><th>노트북 지참</th><th>수업 목표</th>
     </tr></thead><tbody id="adminBody"></tbody></table></div>
     <p class="note">※ Google Apps Script 웹앱이 연결되면 모든 학습자의 응답을 Google Sheet에서 통합 조회합니다. 연결 전에는 브라우저에 임시 저장됩니다.</p>
   </section>
@@ -128,26 +131,29 @@ body[data-font='xxlarge'] .stats{grid-template-columns:1fr}
 </div>
 <div class="toast hidden" id="toast"></div>
 
+<script src="config.js"></script>
 <script>
+const API_URL=(window.AI_SURVEY_API_URL||'').trim();
+let adminRows=[];
+let adminPassword='';
 const STORAGE_KEY='aiClassSurvey.responses.v1';
 const FONT_KEY='aiClassSurvey.fontSize.v1';
 const ADMIN_HASH='03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // 기본 비밀번호 1234의 SHA-256
+const profileQuestion={id:'name',type:'text',required:true,title:'성함을 알려주세요.',desc:'설문 결과를 구분하기 위한 기본 정보입니다.',placeholder:'예: 김민수'};
 const questions=[
- {id:'name',type:'text',required:true,title:'성함을 알려주세요.',desc:'설문 결과를 구분하기 위해 이름을 입력해 주세요.',placeholder:'예: 김민수'},
- {id:'digital',type:'single',title:'스마트폰이나 컴퓨터 사용은 어느 정도 편하신가요?',opts:['많이 어렵다','조금 어렵다','보통이다','익숙하다']},
- {id:'aiExp',type:'single',title:'ChatGPT, Gemini 같은 AI를 사용해 본 적이 있나요?',opts:['전혀 없다','1~2번 해봤다','가끔 사용한다','자주 사용한다']},
- {id:'tools',type:'multi',title:'사용해 본 AI가 있다면 골라주세요.',desc:'여러 개 선택할 수 있습니다.',opts:['ChatGPT','Gemini','Copilot','Claude','이미지·영상 AI','잘 모르겠다']},
- {id:'prompt',type:'single',title:'AI에게 직접 질문을 입력해 본 경험은 어느 정도인가요?',opts:['없다','간단한 질문만 해봤다','원하는 내용을 자세히 요청해봤다','반복해서 수정 요청도 해봤다']},
- {id:'purpose',type:'multi',title:'AI를 주로 어떤 목적으로 사용하고 싶으신가요?',desc:'관심 있는 항목을 모두 골라주세요.',opts:['생활정보','업무','문서작성','공부·교육','이미지·영상','취업·창업','취미','기타']},
- {id:'done',type:'multi',title:'AI로 직접 해본 것을 골라주세요.',opts:['질문·검색','글쓰기','번역','문서요약','이미지 생성','영상 생성','데이터 분석','아직 없음']},
- {id:'retry',type:'single',title:'AI가 원하는 답을 주지 않을 때 보통 어떻게 하시나요?',opts:['사용을 중단한다','같은 질문을 다시 한다','질문을 조금 바꾼다','조건을 추가하면서 계속 수정한다']},
- {id:'verify',type:'single',title:'AI가 알려준 정보가 맞는지 확인해 본 경험이 있나요?',opts:['생각해 본 적 없다','거의 확인하지 않는다','중요한 내용만 확인한다','다른 자료와 비교해 확인한다']},
- {id:'learn',type:'single',title:'AI로 가장 배우고 싶은 것은 무엇인가요?',opts:['AI 기본 사용법','좋은 질문 만드는 법','업무·생활 활용법','이미지·영상 등 콘텐츠 제작']},
- {id:'practice',type:'single',title:'수업 중 직접 AI를 따라 해보는 실습은 어떠신가요?',opts:['많이 부담된다','조금 걱정된다','해보고 싶다','적극적으로 해보고 싶다']},
- {id:'expect',type:'single',title:'이번 수업에서 가장 기대하는 것은 무엇인가요?',opts:['AI가 무엇인지 이해하기','ChatGPT 사용하기','내 생활·업무에 활용하기','내가 원하는 결과를 AI로 만들어보기']},
- {id:'goal',type:'textarea',required:true,title:'수업이 끝났을 때 “이것만은 할 수 있었으면 좋겠다”는 것이 있나요?',desc:'짧게 한 문장으로 적어주세요.',placeholder:'예: AI로 업무 문서를 빠르게 작성해 보고 싶어요.'}
+ {id:'digital',type:'single',required:true,title:'스마트폰이나 컴퓨터 사용은 어느 정도 편하신가요?',opts:['많이 어렵다','조금 어렵다','보통이다','익숙하다']},
+ {id:'aiExp',type:'single',required:true,title:'ChatGPT, Gemini 같은 AI를 얼마나 사용해 보셨나요?',opts:['전혀 사용해 본 적이 없다','1~2번 정도만 사용해 봤다','가끔 사용한다','자주 사용한다']},
+ {id:'tools',type:'multi',title:'사용해 본 AI가 있다면 모두 골라주세요.',desc:'목록에 없는 AI는 아래 + 버튼으로 직접 추가할 수 있습니다.',opts:['ChatGPT','Gemini','Copilot','Claude','이미지·영상 AI','잘 모르겠다']},
+ {id:'prompt',type:'single',required:true,title:'AI가 원하는 답을 주지 않을 때 어디까지 해보셨나요?',opts:['AI를 거의 사용하지 않았다','같은 질문을 다시 해봤다','조건이나 예시를 추가해 질문해봤다','여러 번 수정하며 결과를 비교해봤다']},
+ {id:'purpose',type:'multi',required:true,title:'앞으로 AI를 어디에 활용하고 싶으신가요?',desc:'관심 있는 항목을 모두 골라주세요.',opts:['생활정보','업무','문서작성','공부·교육','이미지·영상','취업·창업','취미','기타']},
+ {id:'done',type:'multi',required:true,title:'AI로 직접 해본 활동을 모두 골라주세요.',opts:['질문·검색','글쓰기','번역','문서요약','이미지 생성','영상 생성','데이터 분석','아직 없음']},
+ {id:'verify',type:'single',required:true,title:'AI가 알려준 정보가 맞는지 어떻게 확인하시나요?',opts:['확인해 본 적이 없다','거의 확인하지 않는다','중요한 내용만 확인한다','다른 자료와 비교해 확인한다']},
+ {id:'learn',type:'multi',required:true,max:3,title:'이번 수업에서 가장 배우고 싶은 것을 골라주세요.',desc:'최대 3개까지 선택할 수 있습니다.',opts:['AI 기본 사용법','좋은 질문 만드는 법','문서·업무 활용','생활·정보검색 활용','이미지·영상 만들기','자동화·고급 활용']},
+ {id:'goal',type:'textarea',required:true,title:'수업이 끝났을 때 “이것만은 할 수 있었으면 좋겠다”는 것이 있나요?',desc:'짧게 한 문장으로 적어주세요.',placeholder:'예: AI로 업무 문서를 빠르게 작성해 보고 싶어요.'},
+ {id:'practice',type:'single',required:true,title:'AI 실습을 위해 개인 노트북을 가져오실 수 있나요?',desc:'스마트폰은 수업에 꼭 필요합니다. 여기서는 노트북 지참 가능 여부만 확인합니다.',opts:['네, 노트북을 가져올 수 있어요','노트북이 없어 스마트폰으로 참여할게요','노트북은 있지만 가져오기 어려워요','아직 지참 가능 여부를 확인해야 해요']}
 ];
-let step=-1, answers={};
+const steps=[profileQuestion,...questions];
+let step=-1, answers={customTools:[]};
 
 const $=s=>document.querySelector(s);
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
@@ -177,76 +183,125 @@ function intro(){
  step=-1;
  $('#progressWrap').classList.remove('hidden');
  $('#stepText').textContent='시작'; $('#progressBar').style.width='0%';
- $('#screen').innerHTML=`
- <div class="hero">
-   <span class="hero-badge">🌿 AI 수업 사전 체크</span>
-   <div class="big-emoji">👋</div>
-   <h1>AI 수업,<br>나에게 딱 맞게 시작해요.</h1>
-   <p class="desc">시험이 아닙니다. 평소 AI를 얼마나 사용해 보셨는지 편하게 알려주세요. 답변은 수업 난이도와 실습 내용을 준비하는 데 사용합니다.</p>
-   <div class="result-card"><b>약 3분 · 13개 질문</b><div class="note">이름과 필수 문항을 입력하면 제출할 수 있습니다.</div></div>
- </div>
- <div class="nav"><button class="primary" id="startBtn">설문 시작하기 →</button></div>`;
+ $('#screen').innerHTML=
+ '<div class="hero">'+
+   '<span class="hero-badge">🌿 AI 수업 사전 체크</span>'+
+   '<div class="big-emoji">👋</div>'+
+   '<h1>AI 수업,<br>나에게 딱 맞게 시작해요.</h1>'+
+   '<p class="desc">시험이 아닙니다. 평소 AI 경험과 이번 수업에서 필요한 내용을 편하게 알려주세요.</p>'+
+   '<div class="result-card"><b>이름 입력 + 핵심 10문항 · 약 3분</b>'+
+   '<div class="note">📱 스마트폰은 수업에 꼭 필요합니다. 노트북 지참 가능 여부는 마지막 문항에서 확인합니다.</div></div>'+
+ '</div>'+
+ '<div class="nav"><button class="primary" id="startBtn">설문 시작하기 →</button></div>';
  $('#startBtn').onclick=()=>{step=0;renderQuestion()};
 }
 function renderQuestion(){
- const q=questions[step], total=questions.length;
- $('#stepText').textContent=`${step+1} / ${total}`;
- $('#progressBar').style.width=((step+1)/total*100)+'%';
- let body=`<div class="eyebrow">QUESTION ${String(step+1).padStart(2,'0')}</div><h1>${q.title}</h1>${q.desc?'<p class="desc">'+q.desc+'</p>':''}`;
+ const q=steps[step], total=questions.length;
+ const isProfile=step===0;
+ $('#stepText').textContent=isProfile?'이름 입력':(step+' / '+total);
+ $('#progressBar').style.width=(isProfile?0:(step/total*100))+'%';
+ let body='<div class="eyebrow">'+(isProfile?'BASIC INFO':'QUESTION '+String(step).padStart(2,'0'))+'</div>'+
+   '<h1>'+q.title+'</h1>'+(q.desc?'<p class="desc">'+q.desc+'</p>':'');
  if(q.type==='text'){
-   body+=`<input class="field" id="answerInput" maxlength="30" placeholder="${q.placeholder||''}" value="${esc(answers[q.id]||'')}" />`;
+   body+='<input class="field" id="answerInput" maxlength="30" placeholder="'+(q.placeholder||'')+'" value="'+esc(answers[q.id]||'')+'" />';
  }else if(q.type==='textarea'){
-   body+=`<textarea id="answerInput" maxlength="100" placeholder="${q.placeholder||''}">${esc(answers[q.id]||'')}</textarea><div class="note">최대 100자</div>`;
+   body+='<textarea id="answerInput" maxlength="120" placeholder="'+(q.placeholder||'')+'">'+esc(answers[q.id]||'')+'</textarea><div class="note">최대 120자</div>';
  }else{
-   const selected=answers[q.id]|| (q.type==='multi'?[]:'');
+   const selected=answers[q.id]||(q.type==='multi'?[]:'');
    body+='<div class="options">'+q.opts.map(o=>{
      const on=q.type==='multi'?selected.includes(o):selected===o;
-     return `<button class="option ${on?'selected':''}" data-value="${esc(o)}">${q.type==='multi'?'☐ ':''}${esc(o)}</button>`;
+     return '<button class="option '+(on?'selected':'')+'" data-value="'+esc(o)+'">'+(q.type==='multi'?'☐ ':'')+esc(o)+'</button>';
    }).join('')+'</div>';
+   if(q.id==='learn') body+='<div class="limit-note">선택 '+((answers.learn||[]).length)+' / 3</div>';
+   if(q.id==='tools'){
+     const custom=answers.customTools||[];
+     body+='<div class="other-ai-box"><div class="other-ai-row">'+
+       '<input class="field" id="otherAiInput" maxlength="40" placeholder="예: Perplexity, Grok, Midjourney" />'+
+       '<button class="add-ai-btn" id="addAiBtn" type="button">+ 다른 AI 추가</button></div>'+
+       '<div class="custom-list">'+custom.map((v,i)=>'<button class="custom-chip" type="button" data-custom-index="'+i+'" title="눌러서 삭제">＋ '+esc(v)+' ×</button>').join('')+'</div></div>';
+   }
  }
- body+=`<div class="nav">${step>0?'<button class="secondary" id="prevBtn">이전</button>':''}<button class="primary" id="nextBtn">${step===total-1?'설문 제출':'다음 →'}</button></div>`;
+ body+='<div class="nav">'+(step>0?'<button class="secondary" id="prevBtn">이전</button>':'')+
+   '<button class="primary" id="nextBtn">'+(step===steps.length-1?'설문 제출':'다음 →')+'</button></div>';
  $('#screen').innerHTML=body;
+
  if(q.type==='single'){
    document.querySelectorAll('.option').forEach(b=>b.onclick=()=>{answers[q.id]=b.dataset.value;renderQuestion()});
  }else if(q.type==='multi'){
-   document.querySelectorAll('.option').forEach(b=>b.onclick=()=>{const v=b.dataset.value;let a=answers[q.id]||[];a=a.includes(v)?a.filter(x=>x!==v):[...a,v];answers[q.id]=a;renderQuestion()});
+   document.querySelectorAll('.option').forEach(b=>b.onclick=()=>{
+     const v=b.dataset.value; let a=answers[q.id]||[];
+     if(q.id==='tools'){
+       if(v==='잘 모르겠다'){a=['잘 모르겠다'];answers.customTools=[]}
+       else{a=a.filter(x=>x!=='잘 모르겠다');a=a.includes(v)?a.filter(x=>x!==v):[...a,v]}
+     }else{
+       if(q.max && !a.includes(v) && a.length>=q.max){toast('최대 '+q.max+'개까지 선택할 수 있습니다.');return}
+       if(q.id==='done' && v==='아직 없음'){a=['아직 없음']}
+       else{
+         if(q.id==='done') a=a.filter(x=>x!=='아직 없음');
+         a=a.includes(v)?a.filter(x=>x!==v):[...a,v];
+       }
+     }
+     answers[q.id]=a; renderQuestion();
+   });
  }
  const inp=$('#answerInput'); if(inp) inp.addEventListener('input',e=>answers[q.id]=e.target.value.trim());
+ if(q.id==='tools'){
+   const add=()=>{
+     const input=$('#otherAiInput'); const value=(input.value||'').trim();
+     if(!value){toast('추가할 AI 이름을 입력해 주세요.');return}
+     const list=answers.customTools||[];
+     if(list.some(x=>x.toLowerCase()===value.toLowerCase())){toast('이미 추가한 AI입니다.');return}
+     answers.tools=(answers.tools||[]).filter(x=>x!=='잘 모르겠다');
+     answers.customTools=[...list,value]; renderQuestion();
+   };
+   $('#addAiBtn').onclick=add;
+   $('#otherAiInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add()}});
+   document.querySelectorAll('[data-custom-index]').forEach(b=>b.onclick=()=>{
+     const i=Number(b.dataset.customIndex); answers.customTools=(answers.customTools||[]).filter((_,idx)=>idx!==i); renderQuestion();
+   });
+ }
  $('#prevBtn')&&($('#prevBtn').onclick=()=>{step--;renderQuestion()});
  $('#nextBtn').onclick=next;
 }
 function next(){
- const q=questions[step], v=answers[q.id];
- const empty=q.type==='multi' ? !v||!v.length : !v||!String(v).trim();
- if((q.required||['digital','aiExp','prompt','retry','verify','learn','practice','expect'].includes(q.id))&&empty){toast('답변을 선택하거나 입력해 주세요.');return}
- if(step<questions.length-1){step++;renderQuestion()}else submitSurvey();
+ const q=steps[step], v=answers[q.id];
+ const empty=q.type==='multi'?!v||!v.length:!v||!String(v).trim();
+ if(q.id==='tools'){
+   const hasTool=(answers.tools||[]).length||(answers.customTools||[]).length;
+   if(answers.aiExp!=='전혀 사용해 본 적이 없다' && !hasTool){toast('사용해 본 AI를 선택하거나 직접 추가해 주세요.');return}
+ }else if(q.required&&empty){toast('답변을 선택하거나 입력해 주세요.');return}
+ if(step<steps.length-1){step++;renderQuestion()}else submitSurvey();
 }
 function classify(){
  let score=0;
- const ai=answers.aiExp||'', p=answers.prompt||'', r=answers.retry||'', v=answers.verify||'';
- if(ai==='자주 사용한다')score+=3; else if(ai==='가끔 사용한다')score+=2; else if(ai==='1~2번 해봤다')score+=1;
- if(p.includes('반복'))score+=3; else if(p.includes('자세히'))score+=2; else if(p.includes('간단'))score+=1;
- if(r.includes('조건'))score+=2; else if(r.includes('조금'))score+=1;
+ const ai=answers.aiExp||'', p=answers.prompt||'', v=answers.verify||'';
+ if(ai==='자주 사용한다')score+=3; else if(ai==='가끔 사용한다')score+=2; else if(ai.includes('1~2번'))score+=1;
+ if(p.includes('여러 번'))score+=3; else if(p.includes('조건이나 예시'))score+=2; else if(p.includes('같은 질문'))score+=1;
  if(v.includes('다른 자료'))score+=2; else if(v.includes('중요한'))score+=1;
- return score>=7?'AI 활용형 🚀':score>=3?'AI 경험형 🌿':'AI 처음형 🌱';
+ const done=(answers.done||[]).filter(x=>x!=='아직 없음').length;
+ score+=Math.min(2,Math.floor(done/2));
+ return score>=8?'AI 활용형 🚀':score>=4?'AI 경험형 🌿':'AI 처음형 🌱';
 }
 async function submitSurvey(){
- const rec={id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(36),createdAt:new Date().toISOString(),level:classify(),...answers};
+ const mergedTools=[...(answers.tools||[]),...(answers.customTools||[]).map(v=>'기타: '+v)];
+ const rec={id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(36),createdAt:new Date().toISOString(),level:classify(),...answers,tools:mergedTools};
+ delete rec.customTools;
  const all=getResponses(); all.push(rec); saveResponses(all);
  let centralSaved=false;
  if(API_URL){
-   try{ await apiCall('submit',{record:rec}); centralSaved=true; }
-   catch(e){ console.error(e); }
+   try{
+     const serverRec={...rec,learn:Array.isArray(rec.learn)?rec.learn.join(' | '):rec.learn};
+     await apiCall('submit',{record:serverRec}); centralSaved=true;
+   }catch(e){console.error(e)}
  }
  $('#progressWrap').classList.add('hidden');
- $('#screen').innerHTML=`
- <div class="center hero">
-   <div class="big-emoji">🎉</div><h1>설문이 완료되었습니다.</h1>
-   <p class="desc">${esc(answers.name)} 님, 감사합니다.<br>답변을 바탕으로 수업 내용과 실습 난이도를 준비하겠습니다.</p>
-   <div class="result-card"><div class="eyebrow">추천 학습 시작점</div><b style="font-size:22px">${classify()}</b><div class="note">${centralSaved?'Google Sheet에 안전하게 접수되었습니다.':'현재 기기에 임시 저장되었습니다.'}</div></div>
- </div>
- <div class="nav"><button class="primary" id="restartBtn">새 설문 시작</button></div>`;
- $('#restartBtn').onclick=()=>{answers={};intro()};
+ $('#screen').innerHTML=
+ '<div class="center hero"><div class="big-emoji">🎉</div><h1>설문이 완료되었습니다.</h1>'+
+ '<p class="desc">'+esc(answers.name)+' 님, 감사합니다.<br>답변을 바탕으로 수업 내용과 실습 난이도를 준비하겠습니다.</p>'+
+ '<div class="result-card"><div class="eyebrow">추천 학습 시작점</div><b style="font-size:calc(22px * var(--font-scale))">'+classify()+'</b>'+
+ '<div class="note">'+(centralSaved?'Google Sheet에 안전하게 접수되었습니다.':'현재 기기에 임시 저장되었습니다.')+'</div></div></div>'+
+ '<div class="nav"><button class="primary" id="restartBtn">새 설문 시작</button></div>';
+ $('#restartBtn').onclick=()=>{answers={customTools:[]};intro()};
 }
 async function sha256(s){const b=new TextEncoder().encode(s);const h=await crypto.subtle.digest('SHA-256',b);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function openAdminLogin(){ $('#loginModal').classList.remove('hidden'); $('#passwordInput').value=''; $('#loginMsg').textContent=''; setTimeout(()=>$('#passwordInput').focus(),50)}
@@ -256,9 +311,8 @@ async function login(){
    try{
      $('#loginMsg').textContent='응답을 불러오는 중입니다...';
      const data=await apiCall('list',{password});
-     adminRows=(data.records||[]).slice().reverse();
-     $('#loginModal').classList.add('hidden'); showAdmin();
-     return;
+     adminPassword=password; adminRows=(data.records||[]).slice().reverse();
+     $('#loginModal').classList.add('hidden'); showAdmin(); return;
    }catch(e){
      if(String(e.message).includes('unauthorized')){$('#loginMsg').textContent='비밀번호가 맞지 않습니다.';return}
      $('#loginMsg').textContent='Google Sheet 연결을 확인해 주세요.';return;
@@ -266,35 +320,57 @@ async function login(){
  }
  const h=await sha256(password);
  if(h!==ADMIN_HASH){$('#loginMsg').textContent='비밀번호가 맞지 않습니다.';return}
- adminRows=getResponses().slice().reverse();
+ adminPassword=password; adminRows=getResponses().slice().reverse();
  $('#loginModal').classList.add('hidden'); showAdmin();
 }
 function showAdmin(){
  $('#surveyShell').classList.add('hidden'); $('#adminShell').classList.remove('hidden'); $('#app').classList.add('admin-mode'); renderAdmin();
 }
+function showValue(v){
+ if(Array.isArray(v)) return v.join(', ');
+ return String(v||'').split(' | ').join(', ');
+}
+function isTodayValue(value){
+ const d=new Date(value); const now=new Date();
+ if(!isNaN(d)) return d.toDateString()===now.toDateString();
+ const s=String(value||'');
+ return s.includes(String(now.getFullYear())) && s.includes(String(now.getMonth()+1)) && s.includes(String(now.getDate()));
+}
 function renderAdmin(){
- const rows=(API_URL?adminRows:getResponses().slice().reverse()), today=new Date().toLocaleDateString('ko-KR');
+ const rows=(API_URL?adminRows:getResponses().slice().reverse());
  $('#statTotal').textContent=rows.length;
- $('#statToday').textContent=rows.filter(r=>new Date(r.createdAt).toLocaleDateString('ko-KR')===today).length;
- $('#statBeginner').textContent=rows.filter(r=>r.aiExp==='전혀 없다').length;
- $('#adminBody').innerHTML=rows.length?rows.map(r=>`<tr>
- <td>${esc(new Date(r.createdAt).toLocaleString('ko-KR'))}</td><td><b>${esc(r.name)}</b><br><span class="note">${esc(r.level||'')}</span></td>
- <td>${esc(r.aiExp)}</td><td>${esc((r.tools||[]).join(', '))}</td><td>${esc((r.purpose||[]).join(', '))}</td>
- <td>${esc((r.done||[]).join(', '))}</td><td>${esc(r.expect)}</td><td>${esc(r.goal)}</td></tr>`).join(''):
- '<tr><td colspan="8" style="text-align:center;padding:28px;color:#6f7782">아직 저장된 응답이 없습니다.</td></tr>';
+ $('#statToday').textContent=rows.filter(r=>isTodayValue(r.createdAt)).length;
+ $('#statBeginner').textContent=rows.filter(r=>String(r.aiExp||'').includes('전혀')).length;
+ $('#adminBody').innerHTML=rows.length?rows.map(r=>'<tr>'+
+ '<td>'+esc(r.createdAt||'')+'</td><td><b>'+esc(r.name||'')+'</b><br><span class="note">'+esc(r.level||'')+'</span></td>'+
+ '<td>'+esc(r.aiExp||'')+'</td><td>'+esc(showValue(r.tools))+'</td><td>'+esc(showValue(r.purpose))+'</td>'+
+ '<td>'+esc(showValue(r.done))+'</td><td>'+esc(showValue(r.learn))+'</td><td>'+esc(r.practice||'')+'</td><td>'+esc(r.goal||'')+'</td></tr>').join(''):
+ '<tr><td colspan="9" style="text-align:center;padding:28px;color:#6f7782">아직 저장된 응답이 없습니다.</td></tr>';
 }
 function exportCSV(){
  const rows=API_URL?adminRows:getResponses(); if(!rows.length){toast('내보낼 응답이 없습니다.');return}
- const head=['접수일시','이름','분류','AI경험','사용AI','활용목적','직접해본것','프롬프트경험','재질문방식','검증경험','배우고싶은것','실습태도','수업기대','한줄목표'];
- const data=rows.map(r=>[r.createdAt,r.name,r.level,r.aiExp,(r.tools||[]).join('|'),(r.purpose||[]).join('|'),(r.done||[]).join('|'),r.prompt,r.retry,r.verify,r.learn,r.practice,r.expect,r.goal]);
+ const head=['접수일시','이름','분류','디지털기기','AI사용빈도','사용AI','질문·수정수준','활용희망','직접해본활동','검증습관','배우고싶은것','노트북지참','수업목표'];
+ const data=rows.map(r=>[r.createdAt,r.name,r.level,r.digital,r.aiExp,showValue(r.tools),r.prompt,showValue(r.purpose),showValue(r.done),r.verify,showValue(r.learn),r.practice,r.goal]);
  const csv='\uFEFF'+[head,...data].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='AI_수업_사전설문_'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href);
 }
 $('#adminBtn').onclick=openAdminLogin; $('#cancelLogin').onclick=()=>$('#loginModal').classList.add('hidden'); $('#loginBtn').onclick=login;
 $('#passwordInput').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
 $('#backBtn').onclick=()=>{$('#adminShell').classList.add('hidden');$('#surveyShell').classList.remove('hidden');$('#app').classList.remove('admin-mode')};
-$('#exportBtn').onclick=exportCSV; $('#refreshBtn').onclick=renderAdmin;
-$('#clearBtn').onclick=()=>{if(confirm('이 기기에 저장된 모든 설문 응답을 삭제할까요?')){localStorage.removeItem(STORAGE_KEY);renderAdmin();toast('전체 응답을 삭제했습니다.')}};
+$('#exportBtn').onclick=exportCSV;
+$('#refreshBtn').onclick=async()=>{
+ if(API_URL){
+   try{const data=await apiCall('list',{password:adminPassword});adminRows=(data.records||[]).slice().reverse();renderAdmin();toast('새로고침했습니다.')}
+   catch(e){toast('새로고침에 실패했습니다.')}
+ }else renderAdmin();
+};
+$('#clearBtn').onclick=async()=>{
+ if(!confirm('저장된 모든 설문 응답을 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return;
+ if(API_URL){
+   try{await apiCall('clear',{password:adminPassword});adminRows=[];renderAdmin();toast('Google Sheet 응답을 삭제했습니다.')}
+   catch(e){toast('삭제에 실패했습니다.')}
+ }else{localStorage.removeItem(STORAGE_KEY);renderAdmin();toast('전체 응답을 삭제했습니다.')}
+};
 bindFontControls();
 intro();
 </script>
