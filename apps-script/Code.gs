@@ -1,6 +1,6 @@
 const SPREADSHEET_ID = '1ZKMdeEOcNBdhdQtfUKAykair8e653QTuTJd5l03ngr8';
 const SHEET_NAME = '응답';
-const ADMIN_PASSWORD_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // 1234
+const ADMIN_PASSWORD_HASH = '94a2118180637b8733ceca2c33f7ad4b1383c143d0c89eeddea2653b7526aa0e'; // #2040
 
 function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
@@ -54,9 +54,35 @@ function submit_(r) {
     const sh = sheet_();
     const last = sh.getLastRow();
     if (last > 1) {
-      const ids = sh.getRange(2, 2, last - 1, 1).getDisplayValues().flat();
-      if (ids.indexOf(String(r.id)) !== -1) {
-        return json_({ ok: true, duplicate: true, id: r.id });
+      const rows = sh.getRange(2, 1, last - 1, 16).getValues();
+      const now = Date.now();
+      const incomingSignature = [
+        String(r.name || '').trim(),
+        String(r.aiExp || '').trim(),
+        String(r.goal || '').trim(),
+        String(r.practice || '').trim()
+      ].join('||');
+
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const row = rows[i];
+        const existingId = String(row[1] || '');
+        if (existingId === String(r.id)) {
+          return json_({ ok: true, duplicate: true, id: r.id });
+        }
+
+        const rowTime = row[0] instanceof Date ? row[0].getTime() : new Date(row[0]).getTime();
+        if (!isNaN(rowTime) && now - rowTime > 2 * 60 * 1000) break;
+
+        const existingSignature = [
+          String(row[2] || '').trim(),
+          String(row[5] || '').trim(),
+          String(row[15] || '').trim(),
+          String(row[13] || '').trim()
+        ].join('||');
+
+        if (incomingSignature === existingSignature) {
+          return json_({ ok: true, duplicate: true, id: existingId || r.id });
+        }
       }
     }
 
