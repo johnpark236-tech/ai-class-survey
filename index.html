@@ -57,7 +57,7 @@ textarea{min-height:120px;resize:vertical}.nav{display:flex;gap:10px;margin-top:
   <section class="admin hidden" id="adminShell">
     <button class="admin-link" id="backBtn">← 설문으로 돌아가기</button>
     <h2>강사 관리 화면</h2>
-    <p class="desc">이 기기에 저장된 설문 응답을 확인합니다.</p>
+    <p class="desc" id="adminSourceDesc">Google Sheet에 저장된 설문 응답을 확인합니다.</p>
     <div class="stats">
       <div class="stat"><span>총 응답</span><b id="statTotal">0</b></div>
       <div class="stat"><span>오늘 응답</span><b id="statToday">0</b></div>
@@ -71,7 +71,7 @@ textarea{min-height:120px;resize:vertical}.nav{display:flex;gap:10px;margin-top:
     <div class="table-wrap"><table><thead><tr>
       <th>접수일시</th><th>이름</th><th>AI 경험</th><th>사용 AI</th><th>활용 목적</th><th>직접 해본 것</th><th>수업 기대</th><th>한 줄 목표</th>
     </tr></thead><tbody id="adminBody"></tbody></table></div>
-    <p class="note">※ 현재 버전은 GitHub Pages 정적 사이트이므로 응답이 이 브라우저의 localStorage에 저장됩니다. 여러 학습자가 각자 휴대폰에서 제출한 응답을 한곳에 모으려면 중앙 DB 연결이 필요합니다.</p>
+    <p class="note">※ Google Apps Script 웹앱이 연결되면 모든 학습자의 응답을 Google Sheet에서 통합 조회합니다. 연결 전에는 브라우저에 임시 저장됩니다.</p>
   </section>
 </div>
 
@@ -112,6 +112,13 @@ function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),1800)}
 function getResponses(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]}}
 function saveResponses(v){localStorage.setItem(STORAGE_KEY,JSON.stringify(v))}
+async function apiCall(action,payload={}){
+ if(!API_URL) throw new Error('API_NOT_CONFIGURED');
+ const res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})});
+ const data=await res.json();
+ if(!data.ok) throw new Error(data.error||'API_ERROR');
+ return data;
+}
 function intro(){
  step=-1;
  $('#progressWrap').classList.remove('hidden');
@@ -169,15 +176,20 @@ function classify(){
  if(v.includes('다른 자료'))score+=2; else if(v.includes('중요한'))score+=1;
  return score>=7?'AI 활용형 🚀':score>=3?'AI 경험형 🌿':'AI 처음형 🌱';
 }
-function submitSurvey(){
+async function submitSurvey(){
  const rec={id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(36),createdAt:new Date().toISOString(),level:classify(),...answers};
  const all=getResponses(); all.push(rec); saveResponses(all);
+ let centralSaved=false;
+ if(API_URL){
+   try{ await apiCall('submit',{record:rec}); centralSaved=true; }
+   catch(e){ console.error(e); }
+ }
  $('#progressWrap').classList.add('hidden');
  $('#screen').innerHTML=`
  <div class="center hero">
    <div class="big-emoji">🎉</div><h1>설문이 완료되었습니다.</h1>
    <p class="desc">${esc(answers.name)} 님, 감사합니다.<br>답변을 바탕으로 수업 내용과 실습 난이도를 준비하겠습니다.</p>
-   <div class="result-card"><div class="eyebrow">추천 학습 시작점</div><b style="font-size:22px">${classify()}</b></div>
+   <div class="result-card"><div class="eyebrow">추천 학습 시작점</div><b style="font-size:22px">${classify()}</b><div class="note">${centralSaved?'Google Sheet에 안전하게 접수되었습니다.':'현재 기기에 임시 저장되었습니다.'}</div></div>
  </div>
  <div class="nav"><button class="primary" id="restartBtn">새 설문 시작</button></div>`;
  $('#restartBtn').onclick=()=>{answers={};intro()};
@@ -185,15 +197,29 @@ function submitSurvey(){
 async function sha256(s){const b=new TextEncoder().encode(s);const h=await crypto.subtle.digest('SHA-256',b);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function openAdminLogin(){ $('#loginModal').classList.remove('hidden'); $('#passwordInput').value=''; $('#loginMsg').textContent=''; setTimeout(()=>$('#passwordInput').focus(),50)}
 async function login(){
- const h=await sha256($('#passwordInput').value);
+ const password=$('#passwordInput').value;
+ if(API_URL){
+   try{
+     $('#loginMsg').textContent='응답을 불러오는 중입니다...';
+     const data=await apiCall('list',{password});
+     adminRows=(data.records||[]).slice().reverse();
+     $('#loginModal').classList.add('hidden'); showAdmin();
+     return;
+   }catch(e){
+     if(String(e.message).includes('unauthorized')){$('#loginMsg').textContent='비밀번호가 맞지 않습니다.';return}
+     $('#loginMsg').textContent='Google Sheet 연결을 확인해 주세요.';return;
+   }
+ }
+ const h=await sha256(password);
  if(h!==ADMIN_HASH){$('#loginMsg').textContent='비밀번호가 맞지 않습니다.';return}
+ adminRows=getResponses().slice().reverse();
  $('#loginModal').classList.add('hidden'); showAdmin();
 }
 function showAdmin(){
  $('#surveyShell').classList.add('hidden'); $('#adminShell').classList.remove('hidden'); $('#app').classList.add('admin-mode'); renderAdmin();
 }
 function renderAdmin(){
- const rows=getResponses().slice().reverse(), today=new Date().toLocaleDateString('ko-KR');
+ const rows=(API_URL?adminRows:getResponses().slice().reverse()), today=new Date().toLocaleDateString('ko-KR');
  $('#statTotal').textContent=rows.length;
  $('#statToday').textContent=rows.filter(r=>new Date(r.createdAt).toLocaleDateString('ko-KR')===today).length;
  $('#statBeginner').textContent=rows.filter(r=>r.aiExp==='전혀 없다').length;
@@ -204,7 +230,7 @@ function renderAdmin(){
  '<tr><td colspan="8" style="text-align:center;padding:28px;color:#6f7782">아직 저장된 응답이 없습니다.</td></tr>';
 }
 function exportCSV(){
- const rows=getResponses(); if(!rows.length){toast('내보낼 응답이 없습니다.');return}
+ const rows=API_URL?adminRows:getResponses(); if(!rows.length){toast('내보낼 응답이 없습니다.');return}
  const head=['접수일시','이름','분류','AI경험','사용AI','활용목적','직접해본것','프롬프트경험','재질문방식','검증경험','배우고싶은것','실습태도','수업기대','한줄목표'];
  const data=rows.map(r=>[r.createdAt,r.name,r.level,r.aiExp,(r.tools||[]).join('|'),(r.purpose||[]).join('|'),(r.done||[]).join('|'),r.prompt,r.retry,r.verify,r.learn,r.practice,r.expect,r.goal]);
  const csv='\uFEFF'+[head,...data].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');
