@@ -42,10 +42,25 @@ textarea{min-height:120px;resize:vertical}.nav{display:flex;gap:10px;margin-top:
 @media(max-width:430px){.app{padding:0}.phone{width:100%;min-height:100svh;border-radius:0}.top{padding:14px 14px 8px}.brand{font-size:calc(14px * var(--font-scale))}.font-btn{min-width:32px;height:30px}.admin-link{padding:6px 0}main{padding:22px 18px 20px}.progress-wrap{padding:0 16px}.nav{gap:8px}.stats{grid-template-columns:1fr}.admin{border-radius:0;min-height:100svh}}
 body[data-font='large'] .phone{width:min(100%,470px)}
 body[data-font='xlarge'] .phone{width:min(100%,500px)}
-body[data-font='large'] .top,body[data-font='xlarge'] .top{align-items:start}
-body[data-font='xlarge'] .top{grid-template-columns:1fr}
-body[data-font='xlarge'] .top-actions{justify-content:space-between}
+body[data-font='xxlarge'] .phone{width:min(100%,530px)}
+body[data-font='large'] .top,
+body[data-font='xlarge'] .top,
+body[data-font='xxlarge'] .top{align-items:start}
+body[data-font='xlarge'] .top,
+body[data-font='xxlarge'] .top{grid-template-columns:1fr}
+body[data-font='xlarge'] .top-actions,
+body[data-font='xxlarge'] .top-actions{justify-content:space-between}
 body[data-font='xlarge'] .options{gap:13px}
+body[data-font='xxlarge'] .options{gap:15px}
+body[data-font='xxlarge'] .font-controls{width:100%;justify-content:space-between;border-radius:18px}
+body[data-font='xxlarge'] .font-btn{flex:1;min-width:0;height:42px}
+body[data-font='xxlarge'] .nav{flex-direction:column}
+body[data-font='xxlarge'] .secondary,
+body[data-font='xxlarge'] .primary{width:100%}
+body[data-font='xxlarge'] .hero-badge{border-radius:16px}
+body[data-font='xxlarge'] .admin-toolbar{flex-direction:column}
+body[data-font='xxlarge'] .mini{width:100%;min-height:52px}
+body[data-font='xxlarge'] .stats{grid-template-columns:1fr}
 </style>
 </head>
 <body>
@@ -57,7 +72,9 @@ body[data-font='xlarge'] .options{gap:13px}
         <div class="font-controls" aria-label="글씨 크기 조절">
           <button class="font-btn" data-font-size="small" aria-label="글씨 작게">A−</button>
           <button class="font-btn" data-font-size="normal" aria-label="기본 글씨">A</button>
-          <button class="font-btn" data-font-size="large" aria-label="글씨 크게">A+</button>
+          <button class="font-btn" data-font-size="large" aria-label="글씨 크게 1단계">A+</button>
+          <button class="font-btn" data-font-size="xlarge" aria-label="글씨 크게 2단계">A++</button>
+          <button class="font-btn" data-font-size="xxlarge" aria-label="글씨 크게 3단계">A+++</button>
         </div>
         <button class="admin-link" id="adminBtn">강사 접속</button>
       </div>
@@ -75,7 +92,9 @@ body[data-font='xlarge'] .options{gap:13px}
       <div class="font-controls" aria-label="글씨 크기 조절">
         <button class="font-btn" data-font-size="small" aria-label="글씨 작게">A−</button>
         <button class="font-btn" data-font-size="normal" aria-label="기본 글씨">A</button>
-        <button class="font-btn" data-font-size="large" aria-label="글씨 크게">A+</button>
+        <button class="font-btn" data-font-size="large" aria-label="글씨 크게 1단계">A+</button>
+        <button class="font-btn" data-font-size="xlarge" aria-label="글씨 크게 2단계">A++</button>
+        <button class="font-btn" data-font-size="xxlarge" aria-label="글씨 크게 3단계">A+++</button>
       </div>
     </div>
     <h2>강사 관리 화면</h2>
@@ -136,7 +155,7 @@ function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.remove('hi
 function getResponses(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]}}
 function saveResponses(v){localStorage.setItem(STORAGE_KEY,JSON.stringify(v))}
 function applyFontSize(size){
- const map={small:.92,normal:1,large:1.18};
+ const map={small:.92,normal:1,large:1.18,xlarge:1.36,xxlarge:1.55};
  const chosen=map[size]?size:'normal';
  document.documentElement.style.setProperty('--font-scale',map[chosen]);
  document.body.dataset.font=chosen;
