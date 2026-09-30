@@ -7,3 +7,25 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
   style.textContent = `.hero-badge{font-size:calc(26px * var(--font-scale))!important;}`;
   document.head.appendChild(style);
 })();
+
+// 메인 화면 제목에서 중복되는 'AI 수업,' 문구 제거
+(() => {
+  const updateHeroTitle = () => {
+    const title = document.querySelector('#screen .hero h1');
+    if (!title) return;
+    if (title.textContent.includes('AI 수업')) {
+      title.innerHTML = '나에게 딱 맞게 시작해요.';
+    }
+  };
+  const observer = new MutationObserver(updateHeroTitle);
+  const start = () => {
+    updateHeroTitle();
+    const screen = document.querySelector('#screen');
+    if (screen) observer.observe(screen, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
