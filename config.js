@@ -22,8 +22,10 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
       .hero-badge{font-size:calc(26px * var(--font-scale))!important;}
       .ai-logo-row{display:flex;width:100%;gap:10px;align-items:stretch;justify-content:space-between;margin:18px 0 12px;}
       .ai-logo-tile{flex:1 1 0;aspect-ratio:1/1;height:auto;min-width:0;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 10px 26px rgba(38,48,42,.10);overflow:hidden;}
-      .ai-logo-svg{width:82%;height:82%;display:block;}
-      .ai-logo-svg.gemini{width:88%;height:88%;}
+      .ai-logo-svg{width:86%;height:86%;display:block;background:transparent;}
+      .ai-logo-svg.chatgpt{width:82%;height:82%;}
+      .ai-logo-svg.claude{width:88%;height:88%;}
+      .ai-logo-svg.gemini{width:90%;height:90%;}
       @media(max-width:430px){.top{grid-template-columns:minmax(70px,1fr) auto!important;gap:8px!important}.brand{font-size:calc(16px * var(--font-scale))!important}.ai-logo-row{gap:8px}.ai-logo-tile{border-radius:18px}.font-controls .font-btn[data-font-size="small"],.font-controls .font-btn[data-font-size="large"]{min-width:38px!important;height:34px!important}}
       body[data-font='xlarge'] .top,
       body[data-font='xxlarge'] .top{grid-template-columns:minmax(82px,1fr) auto!important;}
@@ -47,7 +49,7 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
   };
 
   const chatGptSvg = () => `
-    <svg class="ai-logo-svg" viewBox="0 0 100 100" role="img" aria-label="ChatGPT 로고" xmlns="http://www.w3.org/2000/svg">
+    <svg class="ai-logo-svg chatgpt" viewBox="0 0 100 100" role="img" aria-label="ChatGPT 로고" xmlns="http://www.w3.org/2000/svg">
       <g fill="none" stroke="#111827" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M50 16c10 0 17 7 17 16 0 5-2 9-5 12"/>
         <path d="M72 27c8 5 10 15 5 23-3 5-7 7-12 8"/>
@@ -60,32 +62,30 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
     </svg>`;
 
   const claudeSvg = () => `
-    <svg class="ai-logo-svg" viewBox="0 0 100 100" role="img" aria-label="Claude 로고" xmlns="http://www.w3.org/2000/svg">
-      <rect x="6" y="6" width="88" height="88" rx="22" fill="#FFF7EF"/>
+    <svg class="ai-logo-svg claude" viewBox="0 0 100 100" role="img" aria-label="Claude 로고" xmlns="http://www.w3.org/2000/svg">
       <g fill="#D97757">
-        <path d="M50 13l8 25 25-8-17 20 17 20-25-8-8 25-8-25-25 8 17-20-17-20 25 8z" opacity=".96"/>
-        <circle cx="50" cy="50" r="12" fill="#B85C38" opacity=".34"/>
+        <path d="M50 10l8.4 26.4L86 27.5 66.8 50 86 72.5l-27.6-8.9L50 90l-8.4-26.4L14 72.5 33.2 50 14 27.5l27.6 8.9L50 10z"/>
+        <circle cx="50" cy="50" r="12" fill="#B85C38" opacity=".28"/>
       </g>
     </svg>`;
 
   const geminiSvg = () => `
     <svg class="ai-logo-svg gemini" viewBox="0 0 100 100" role="img" aria-label="Gemini 로고" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="geminiGradient" x1="18" y1="82" x2="84" y2="16" gradientUnits="userSpaceOnUse">
+        <linearGradient id="geminiGradientClean" x1="16" y1="84" x2="86" y2="14" gradientUnits="userSpaceOnUse">
           <stop offset="0" stop-color="#4285F4"/>
-          <stop offset=".32" stop-color="#34A853"/>
-          <stop offset=".56" stop-color="#FBBC05"/>
-          <stop offset=".78" stop-color="#EA4335"/>
+          <stop offset=".28" stop-color="#34A853"/>
+          <stop offset=".52" stop-color="#FBBC05"/>
+          <stop offset=".75" stop-color="#EA4335"/>
           <stop offset="1" stop-color="#8E75B2"/>
         </linearGradient>
-        <filter id="geminiGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2.4" result="blur"/>
+        <filter id="geminiGlowClean" x="-25%" y="-25%" width="150%" height="150%">
+          <feGaussianBlur stdDeviation="2.2" result="blur"/>
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
-      <rect x="6" y="6" width="88" height="88" rx="22" fill="#FBFAFF"/>
-      <path filter="url(#geminiGlow)" fill="url(#geminiGradient)" d="M50 8c5 25 17 37 42 42-25 5-37 17-42 42-5-25-17-37-42-42 25-5 37-17 42-42z"/>
-      <path fill="rgba(255,255,255,.88)" d="M50 29c2.6 11.8 8.2 17.4 20 21-11.8 2.6-17.4 8.2-20 20-2.6-11.8-8.2-17.4-20-20 11.8-3.6 17.4-9.2 20-21z"/>
+      <path filter="url(#geminiGlowClean)" fill="url(#geminiGradientClean)" d="M50 6c5.6 26.8 16.8 38 44 44-27.2 6-38.4 17.2-44 44C44.4 67.2 33.2 56 6 50c27.2-6 38.4-17.2 44-44z"/>
+      <path fill="rgba(255,255,255,.82)" d="M50 28c3 12.2 9.8 19 22 22-12.2 3-19 9.8-22 22-3-12.2-9.8-19-22-22 12.2-3 19-9.8 22-22z"/>
     </svg>`;
 
   const createLogoRow = () => {
