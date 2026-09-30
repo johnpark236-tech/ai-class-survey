@@ -1,7 +1,7 @@
 // Google Apps Script 중앙 저장 API
 window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhUah03vg8BVX9SKyVateTfxN7lkMRMYDbwcWfg72mupp1OKOnNhWLUSsv3g/exec';
 
-// 메인 화면 UI 보정: 브랜드명, 안내 문구, AI 로고 행, 재설문 흐름
+// 메인 화면 UI 보정: 브랜드명, 안내 문구, 재설문 흐름
 (() => {
   const BRAND_HTML = 'AI 학습<br>동아리';
   const BRAND_TEXT = 'AI 학습 동아리';
@@ -20,13 +20,8 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
       .font-controls .font-btn[data-font-size="small"],
       .font-controls .font-btn[data-font-size="large"]{display:inline-flex!important;align-items:center;justify-content:center;min-width:42px!important;height:36px!important;}
       .hero-badge{font-size:calc(26px * var(--font-scale))!important;}
-      .ai-logo-row{display:flex;width:100%;gap:10px;align-items:stretch;justify-content:space-between;margin:18px 0 12px;}
-      .ai-logo-tile{flex:1 1 0;aspect-ratio:1/1;height:auto;min-width:0;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 10px 26px rgba(38,48,42,.10);overflow:hidden;}
-      .ai-logo-svg{width:86%;height:86%;display:block;background:transparent;}
-      .ai-logo-svg.chatgpt{width:82%;height:82%;}
-      .ai-logo-svg.claude{width:88%;height:88%;}
-      .ai-logo-svg.gemini{width:90%;height:90%;}
-      @media(max-width:430px){.top{grid-template-columns:minmax(70px,1fr) auto!important;gap:8px!important}.brand{font-size:calc(16px * var(--font-scale))!important}.ai-logo-row{gap:8px}.ai-logo-tile{border-radius:18px}.font-controls .font-btn[data-font-size="small"],.font-controls .font-btn[data-font-size="large"]{min-width:38px!important;height:34px!important}}
+      .ai-logo-spacer{display:block;width:100%;height:calc(92px * var(--font-scale));max-height:116px;min-height:74px;margin:18px 0 12px;}
+      @media(max-width:430px){.top{grid-template-columns:minmax(70px,1fr) auto!important;gap:8px!important}.brand{font-size:calc(16px * var(--font-scale))!important}.font-controls .font-btn[data-font-size="small"],.font-controls .font-btn[data-font-size="large"]{min-width:38px!important;height:34px!important}.ai-logo-spacer{height:82px;min-height:70px;margin:16px 0 10px;}}
       body[data-font='xlarge'] .top,
       body[data-font='xxlarge'] .top{grid-template-columns:minmax(82px,1fr) auto!important;}
     `;
@@ -48,56 +43,11 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
     });
   };
 
-  const chatGptSvg = () => `
-    <svg class="ai-logo-svg chatgpt" viewBox="0 0 100 100" role="img" aria-label="ChatGPT 로고" xmlns="http://www.w3.org/2000/svg">
-      <g fill="none" stroke="#111827" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M50 16c10 0 17 7 17 16 0 5-2 9-5 12"/>
-        <path d="M72 27c8 5 10 15 5 23-3 5-7 7-12 8"/>
-        <path d="M77 55c0 10-7 17-16 17-5 0-9-2-12-5"/>
-        <path d="M50 84c-10 0-17-7-17-16 0-5 2-9 5-12"/>
-        <path d="M28 73c-8-5-10-15-5-23 3-5 7-7 12-8"/>
-        <path d="M23 45c0-10 7-17 16-17 5 0 9 2 12 5"/>
-        <path d="M37 43l13-8 13 8v14l-13 8-13-8z" stroke-width="6"/>
-      </g>
-    </svg>`;
-
-  const claudeSvg = () => `
-    <svg class="ai-logo-svg claude" viewBox="0 0 100 100" role="img" aria-label="Claude 로고" xmlns="http://www.w3.org/2000/svg">
-      <g fill="#D97757">
-        <path d="M50 10l8.4 26.4L86 27.5 66.8 50 86 72.5l-27.6-8.9L50 90l-8.4-26.4L14 72.5 33.2 50 14 27.5l27.6 8.9L50 10z"/>
-        <circle cx="50" cy="50" r="12" fill="#B85C38" opacity=".28"/>
-      </g>
-    </svg>`;
-
-  const geminiSvg = () => `
-    <svg class="ai-logo-svg gemini" viewBox="0 0 100 100" role="img" aria-label="Gemini 로고" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="geminiGradientClean" x1="16" y1="84" x2="86" y2="14" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stop-color="#4285F4"/>
-          <stop offset=".28" stop-color="#34A853"/>
-          <stop offset=".52" stop-color="#FBBC05"/>
-          <stop offset=".75" stop-color="#EA4335"/>
-          <stop offset="1" stop-color="#8E75B2"/>
-        </linearGradient>
-        <filter id="geminiGlowClean" x="-25%" y="-25%" width="150%" height="150%">
-          <feGaussianBlur stdDeviation="2.2" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-      <path filter="url(#geminiGlowClean)" fill="url(#geminiGradientClean)" d="M50 6c5.6 26.8 16.8 38 44 44-27.2 6-38.4 17.2-44 44C44.4 67.2 33.2 56 6 50c27.2-6 38.4-17.2 44-44z"/>
-      <path fill="rgba(255,255,255,.82)" d="M50 28c3 12.2 9.8 19 22 22-12.2 3-19 9.8-22 22-3-12.2-9.8-19-22-22 12.2-3 19-9.8 22-22z"/>
-    </svg>`;
-
-  const createLogoRow = () => {
-    const row = document.createElement('div');
-    row.className = 'ai-logo-row';
-    row.setAttribute('aria-label', 'AI 도구 로고');
-    row.innerHTML = `
-      <span class="ai-logo-tile">${chatGptSvg()}</span>
-      <span class="ai-logo-tile">${claudeSvg()}</span>
-      <span class="ai-logo-tile">${geminiSvg()}</span>
-    `;
-    return row;
+  const createLogoSpacer = () => {
+    const spacer = document.createElement('div');
+    spacer.className = 'ai-logo-spacer';
+    spacer.setAttribute('aria-hidden', 'true');
+    return spacer;
   };
 
   const applyHeroPatch = () => {
@@ -126,14 +76,13 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
     const hand = hero.querySelector('.big-emoji');
     if (hand) hand.remove();
 
-    const oldRow = hero.querySelector('.ai-logo-row');
-    if (oldRow && !oldRow.querySelector('svg')) oldRow.remove();
+    hero.querySelectorAll('.ai-logo-row').forEach(row => row.remove());
 
-    if (!hero.querySelector('.ai-logo-row')) {
+    if (!hero.querySelector('.ai-logo-spacer')) {
       const badge = hero.querySelector('.hero-badge');
-      const row = createLogoRow();
-      if (badge) badge.insertAdjacentElement('afterend', row);
-      else hero.insertBefore(row, hero.firstChild);
+      const spacer = createLogoSpacer();
+      if (badge) badge.insertAdjacentElement('afterend', spacer);
+      else hero.insertBefore(spacer, hero.firstChild);
     }
   };
 
