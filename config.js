@@ -29,3 +29,25 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
     start();
   }
 })();
+
+// 메인 화면 안내 문구에서 '이름 입력 +' 제거
+(() => {
+  const updateHeroSummary = () => {
+    const summary = document.querySelector('#screen .hero .result-card b');
+    if (!summary) return;
+    if (summary.textContent.includes('이름 입력')) {
+      summary.textContent = summary.textContent.replace('이름 입력 + ', '').trim();
+    }
+  };
+  const observer = new MutationObserver(updateHeroSummary);
+  const start = () => {
+    updateHeroSummary();
+    const screen = document.querySelector('#screen');
+    if (screen) observer.observe(screen, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
