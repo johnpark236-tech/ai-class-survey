@@ -1,8 +1,9 @@
 // Google Apps Script 중앙 저장 API
 window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhUah03vg8BVX9SKyVateTfxN7lkMRMYDbwcWfg72mupp1OKOnNhWLUSsv3g/exec';
 
-// 메인 화면 UI 보정: 브랜드명, 안내 문구, AI 로고 행
+// 메인 화면 UI 보정: 브랜드명, 안내 문구, AI 로고 행, 재설문 흐름
 (() => {
+  const BRAND_HTML = 'AI 학습<br>동아리';
   const BRAND_TEXT = 'AI 학습 동아리';
   const HERO_TITLE_TEXT = '나에게 딱 맞게 시작해요.';
   const SUMMARY_TEXT = '10문항 · 약 3분';
@@ -12,39 +13,101 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
     const style = document.createElement('style');
     style.id = 'ai-hero-logo-style';
     style.textContent = `
-      .brand{white-space:nowrap;word-break:keep-all;overflow-wrap:normal;}
+      .brand{white-space:normal!important;word-break:keep-all;overflow-wrap:normal;line-height:1.18!important;font-size:calc(18px * var(--font-scale))!important;letter-spacing:-.035em;text-align:left;}
+      .top{grid-template-columns:minmax(84px,1fr) auto!important;align-items:center!important;}
+      .font-controls{gap:6px!important;padding:5px!important;}
+      .font-controls .font-btn{display:none!important;}
+      .font-controls .font-btn[data-font-size="small"],
+      .font-controls .font-btn[data-font-size="large"]{display:inline-flex!important;align-items:center;justify-content:center;min-width:42px!important;height:36px!important;}
       .hero-badge{font-size:calc(26px * var(--font-scale))!important;}
-      .ai-logo-row{display:flex;gap:10px;align-items:center;margin:18px 0 10px;}
-      .ai-logo-tile{width:calc(64px * var(--font-scale));height:calc(64px * var(--font-scale));max-width:86px;max-height:86px;min-width:54px;min-height:54px;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 22px rgba(38,48,42,.08);overflow:hidden;}
-      .ai-logo-tile img{width:68%;height:68%;object-fit:contain;display:block;}
-      .ai-logo-fallback{font-size:calc(18px * var(--font-scale));font-weight:900;line-height:1;color:#111827;}
-      @media(max-width:430px){.ai-logo-row{gap:8px}.ai-logo-tile{width:58px;height:58px;border-radius:16px}.brand{font-size:calc(13px * var(--font-scale))!important;}}
+      .ai-logo-row{display:flex;width:100%;gap:10px;align-items:stretch;justify-content:space-between;margin:18px 0 12px;}
+      .ai-logo-tile{flex:1 1 0;aspect-ratio:1/1;height:auto;min-width:0;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 10px 26px rgba(38,48,42,.10);overflow:hidden;}
+      .ai-logo-svg{width:82%;height:82%;display:block;}
+      .ai-logo-svg.gemini{width:88%;height:88%;}
+      @media(max-width:430px){.top{grid-template-columns:minmax(70px,1fr) auto!important;gap:8px!important}.brand{font-size:calc(16px * var(--font-scale))!important}.ai-logo-row{gap:8px}.ai-logo-tile{border-radius:18px}.font-controls .font-btn[data-font-size="small"],.font-controls .font-btn[data-font-size="large"]{min-width:38px!important;height:34px!important}}
+      body[data-font='xlarge'] .top,
+      body[data-font='xxlarge'] .top{grid-template-columns:minmax(82px,1fr) auto!important;}
     `;
     document.head.appendChild(style);
   };
 
-  const logoImg = (src, alt, fallback) => {
-    return `<span class="ai-logo-tile"><img src="${src}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ai-logo-fallback',textContent:'${fallback}'}))"></span>`;
+  const simplifyFontControls = () => {
+    document.querySelectorAll('.font-controls').forEach(group => {
+      const small = group.querySelector('[data-font-size="small"]');
+      const large = group.querySelector('[data-font-size="large"]');
+      if (small) {
+        small.textContent = 'A−';
+        small.setAttribute('aria-label', '글씨 작게');
+      }
+      if (large) {
+        large.textContent = 'A+';
+        large.setAttribute('aria-label', '글씨 크게');
+      }
+    });
   };
+
+  const chatGptSvg = () => `
+    <svg class="ai-logo-svg" viewBox="0 0 100 100" role="img" aria-label="ChatGPT 로고" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#111827" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M50 16c10 0 17 7 17 16 0 5-2 9-5 12"/>
+        <path d="M72 27c8 5 10 15 5 23-3 5-7 7-12 8"/>
+        <path d="M77 55c0 10-7 17-16 17-5 0-9-2-12-5"/>
+        <path d="M50 84c-10 0-17-7-17-16 0-5 2-9 5-12"/>
+        <path d="M28 73c-8-5-10-15-5-23 3-5 7-7 12-8"/>
+        <path d="M23 45c0-10 7-17 16-17 5 0 9 2 12 5"/>
+        <path d="M37 43l13-8 13 8v14l-13 8-13-8z" stroke-width="6"/>
+      </g>
+    </svg>`;
+
+  const claudeSvg = () => `
+    <svg class="ai-logo-svg" viewBox="0 0 100 100" role="img" aria-label="Claude 로고" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="6" width="88" height="88" rx="22" fill="#FFF7EF"/>
+      <g fill="#D97757">
+        <path d="M50 13l8 25 25-8-17 20 17 20-25-8-8 25-8-25-25 8 17-20-17-20 25 8z" opacity=".96"/>
+        <circle cx="50" cy="50" r="12" fill="#B85C38" opacity=".34"/>
+      </g>
+    </svg>`;
+
+  const geminiSvg = () => `
+    <svg class="ai-logo-svg gemini" viewBox="0 0 100 100" role="img" aria-label="Gemini 로고" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="geminiGradient" x1="18" y1="82" x2="84" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#4285F4"/>
+          <stop offset=".32" stop-color="#34A853"/>
+          <stop offset=".56" stop-color="#FBBC05"/>
+          <stop offset=".78" stop-color="#EA4335"/>
+          <stop offset="1" stop-color="#8E75B2"/>
+        </linearGradient>
+        <filter id="geminiGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <rect x="6" y="6" width="88" height="88" rx="22" fill="#FBFAFF"/>
+      <path filter="url(#geminiGlow)" fill="url(#geminiGradient)" d="M50 8c5 25 17 37 42 42-25 5-37 17-42 42-5-25-17-37-42-42 25-5 37-17 42-42z"/>
+      <path fill="rgba(255,255,255,.88)" d="M50 29c2.6 11.8 8.2 17.4 20 21-11.8 2.6-17.4 8.2-20 20-2.6-11.8-8.2-17.4-20-20 11.8-3.6 17.4-9.2 20-21z"/>
+    </svg>`;
 
   const createLogoRow = () => {
     const row = document.createElement('div');
     row.className = 'ai-logo-row';
     row.setAttribute('aria-label', 'AI 도구 로고');
     row.innerHTML = `
-      ${logoImg('https://cdn.simpleicons.org/openai/111827', 'ChatGPT 로고', 'GPT')}
-      ${logoImg('https://cdn.simpleicons.org/claude/D97757', 'Claude 로고', 'C')}
-      ${logoImg('https://cdn.simpleicons.org/googlegemini/8E75B2', 'Gemini 로고', 'G')}
+      <span class="ai-logo-tile">${chatGptSvg()}</span>
+      <span class="ai-logo-tile">${claudeSvg()}</span>
+      <span class="ai-logo-tile">${geminiSvg()}</span>
     `;
     return row;
   };
 
   const applyHeroPatch = () => {
     injectStyle();
+    simplifyFontControls();
 
     const brand = document.querySelector('.brand');
-    if (brand && brand.textContent.trim() !== BRAND_TEXT) {
-      brand.textContent = BRAND_TEXT;
+    if (brand && brand.innerHTML.trim() !== BRAND_HTML) {
+      brand.innerHTML = BRAND_HTML;
+      brand.setAttribute('aria-label', BRAND_TEXT);
     }
 
     const hero = document.querySelector('#screen .hero');
@@ -62,6 +125,9 @@ window.AI_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbzc15F1HbyhU
 
     const hand = hero.querySelector('.big-emoji');
     if (hand) hand.remove();
+
+    const oldRow = hero.querySelector('.ai-logo-row');
+    if (oldRow && !oldRow.querySelector('svg')) oldRow.remove();
 
     if (!hero.querySelector('.ai-logo-row')) {
       const badge = hero.querySelector('.hero-badge');
